@@ -1,16 +1,12 @@
-//학생의 Action의 return 값은 
-//return Wait(hp, name);
-//return Heal(hp, name);
-//둘중 하나여야함
+//학번 이름
 
 int ES1action(int hp, char* name)
 {
-    int r = rand() % 2; // 0 또는 1
-    if (r == 0) {
-        return Wait(hp, name);
+    if (hp > 20) {
+        return Heal(hp, name);
     }
     else {
-        return Heal(hp, name);
+        return Wait(hp, name);
 
     }
 }

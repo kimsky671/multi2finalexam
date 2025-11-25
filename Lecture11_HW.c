@@ -34,11 +34,11 @@ int main()
     p[0].name = "ES1";
     p[0].act = ES1action;
     p[1].name = "ES2";
-    p[1].act = Heal;
+    p[1].act = ES2action;
     p[2].name = "ES3";
-    p[2].act = Heal;
+    p[2].act = ES3action;
     p[3].name = "ES4";
-    p[3].act = Heal;
+    p[3].act = ES4action;
 
 
     while(1)
