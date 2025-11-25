@@ -1,12 +1,25 @@
-//í•™ë²ˆ ì´ë¦„
+//ÇĞ»ıÀÇ ActionÀÇ return °ªÀº 
+//return Wait(hp, name);
+//return Heal(hp, name);
+//µÑÁß ÇÏ³ª¿©¾ßÇÔ
 
-int ES1action(int hp, char* name)
-{
-    if (hp > 20) {
+#include "ES1_1101.h"
+#include <stdio.h>
+#include <stdlib.h> 
+
+
+int ES1action(int hp, char* name) {
+    printf(">>> [%s (mm)] ÅÏ (ÇöÀç HP: %d) <<<\n", name, hp);
+
+    // ES1ÀÇ Àü·«: HP°¡ 30 ÀÌÇÏÀÏ ¶§ È¸º¹À» ½ÃµµÇÏ°í, ±× ¿Ü¿¡´Â °ø°İ(Wait)À» ½ÃµµÇÕ´Ï´Ù.
+    if (hp <= 30) {
+        printf("[%s]°¡ À§ÇèÀ» ´À²¸ '±ä±Ş È¸º¹'À» ½ÃµµÇÕ´Ï´Ù!\n", name);
+        // Á¶°Ç: return Heal(hp, name);
         return Heal(hp, name);
     }
     else {
+        printf("[%s]°¡ »ó´ë¿¡°Ô '°­·ÂÇÑ °ø°İ'À» ½ÃµµÇÕ´Ï´Ù.\n", name);
+        // Á¶°Ç: return Wait(hp, name);
         return Wait(hp, name);
-
     }
-}
+} 
