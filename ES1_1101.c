@@ -1,7 +1,4 @@
-//학생의 Action의 return 값은 
-//return Wait(hp, name);
-//return Heal(hp, name);
-//둘중 하나여야함
+//20251388 김민서
 
 #include "ES1_1101.h"
 #include <stdio.h>
