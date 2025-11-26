@@ -1,11 +1,13 @@
-//ÇÐ¹ø ÀÌ¸§
+//20251404 ±èÇÏ´Ã
 
 int ES3action(int hp, char* name)
 {
-    if (hp < 20) {
+    if (hp == 100) 
+    {
         return Heal(hp, name);
     }
-    else {
+    else 
+    {
         return Wait(hp, name);
 
     }
