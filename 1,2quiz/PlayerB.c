@@ -1,8 +1,6 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
-#include "api.h"
+﻿#include "api.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdlib.h> 
 
 
 #ifndef CMD_UP
@@ -25,10 +23,112 @@ int g_quiz_count = 0;
 
 #define MAX_LINE_LENGTH 512
 #define MAX_ITEMS 100
-#define DELIMITER ","
+#define DELIMITER ','
+
+
+int custom_strlen(const char* str) {
+    int len = 0;
+    while (str[len] != '\0') {
+        len++;
+    }
+    return len;
+}
+
+
+void custom_strcpy(char* dest, const char* src, size_t dest_size) {
+    size_t i = 0;
+    while (i < dest_size - 1 && src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+
+int custom_strcmp(const char* str1, const char* str2) {
+    while (*str1 && (*str1 == *str2)) {
+        str1++;
+        str2++;
+    }
+    return *(const unsigned char*)str1 - *(const unsigned char*)str2;
+}
+
+
+void custom_strcat(char* dest, const char* src, size_t dest_size) {
+    char* d = dest;
+    while (*d != '\0') { 
+        d++;
+    }
+    while (*src != '\0' && (d - dest) < dest_size - 1) { 
+        *d++ = *src++;
+    }
+    *d = '\0';
+}
+
+
+const char* custom_strchr(const char* str, int c) {
+    while (*str != '\0') {
+        if (*str == (char)c) {
+            return str;
+        }
+        str++;
+    }
+    if ((char)c == '\0') {
+        return str;
+    }
+    return NULL;
+}
+
+
+void custom_chomp(char* str) {
+    int len = custom_strlen(str);
+    while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r')) {
+        str[len - 1] = '\0';
+        len--;
+    }
+}
+
+
+const char* get_csv_field_ptr(const char* line, int n) {
+    int current_field = 0;
+    const char* ptr = line;
+
+   
+    while (*ptr != '\0' && current_field < n) {
+        if (*ptr == DELIMITER) {
+            current_field++;
+        }
+        ptr++;
+    }
+
+    if (current_field == n) {
+        return ptr;
+    }
+    return NULL; 
+}
+
+
+void get_csv_field(const char* line, int n, char* destination, size_t dest_size) {
+    const char* start = get_csv_field_ptr(line, n);
+    if (start == NULL) {
+        destination[0] = '\0';
+        return;
+    }
+
+    size_t i = 0;
+    const char* current = start;
+
+    while (*current != '\0' && *current != DELIMITER && i < dest_size - 1) {
+        destination[i] = *current;
+        current++;
+        i++;
+    }
+    destination[i] = '\0';
+}
+
 
 int find_t_index(const char* frag) {
-    const char* first_t = strchr(frag, 'T');
+    const char* first_t = custom_strchr(frag, 'T');
     if (first_t == NULL) {
         return 0;
     }
@@ -36,48 +136,34 @@ int find_t_index(const char* frag) {
         return (int)(first_t - frag);
     }
 }
-
-void get_csv_field(char* line, int n, char* destination, size_t dest_size) {
-    char temp_line[MAX_LINE_LENGTH];
-
-#ifdef _MSC_VER
+void custom_itoa(int n, char* buffer) {
     
-    strncpy_s(temp_line, MAX_LINE_LENGTH, line, _TRUNCATE);
-    char* context = NULL;
-    char* token = strtok_s(temp_line, DELIMITER, &context);
-#else
-    
-    strncpy(temp_line, line, MAX_LINE_LENGTH - 1);
-    temp_line[MAX_LINE_LENGTH - 1] = '\0';
-    char* token = strtok(temp_line, DELIMITER);
-#endif
+    int i = 0;
+    int divisor = 1;
+    int temp = n;
 
-    int current_field = 0;
-    destination[0] = '\0';
-
-    while (token != NULL) {
-        if (current_field == n) {
-#ifdef _MSC_VER
-            strncpy_s(destination, dest_size, token, _TRUNCATE);
-#else
-            strncpy(destination, token, dest_size - 1);
-            destination[dest_size - 1] = '\0';
-#endif
-            return;
-        }
-
-#ifdef _MSC_VER
-        token = strtok_s(NULL, DELIMITER, &context);
-#else
-        token = strtok(NULL, DELIMITER);
-#endif
-
-        current_field++;
+    if (n == 0) {
+        buffer[0] = '0';
+        buffer[1] = '\0';
+        return;
     }
+
+
+    while (temp > 0) {
+        temp /= 10;
+        if (temp > 0) divisor *= 10;
+    }
+
+    
+    while (divisor > 0) {
+        buffer[i++] = (char)((n / divisor) % 10 + '0');
+        divisor /= 10;
+    }
+    buffer[i] = '\0';
 }
 
 // -------------------------------------------------------------------------
-//  문제 1
+// 문제 1
 // -------------------------------------------------------------------------
 void load_quiz_1_answer() {
     FILE* fp = fopen("AI1-2_C_Final.csv", "r");
@@ -88,7 +174,7 @@ void load_quiz_1_answer() {
 
     char line[MAX_LINE_LENGTH];
 
-
+  
     if (fgets(line, sizeof(line), fp) == NULL) {
         fclose(fp);
         return;
@@ -98,56 +184,28 @@ void load_quiz_1_answer() {
     int item_name_count = 0;
 
     while (fgets(line, sizeof(line), fp) != NULL) {
-        line[strcspn(line, "\r\n")] = 0;
+        custom_chomp(line); 
+
         if (line[0] == '\0') continue;
 
-        char* token;
-        char temp_buffer[MAX_LINE_LENGTH];
-        strcpy(temp_buffer, line);
-
         char item_name[32] = "";
-        int atk = 0, def = 0, hp = 0;
-        int field_index = 0;
+        char str_atk[16] = "", str_def[16] = "", str_hp[16] = "";
 
-#ifdef _MSC_VER
-        char* context = NULL;
-        token = strtok_s(temp_buffer, DELIMITER, &context);
-#else
-        token = strtok(temp_buffer, DELIMITER);
-#endif
+        
+        get_csv_field(line, 1, item_name, 32); 
+        get_csv_field(line, 3, str_atk, 16);    
+        get_csv_field(line, 4, str_def, 16);    
+        get_csv_field(line, 5, str_hp, 16);     
 
-        while (token != NULL) {
-            field_index++;
-
-            switch (field_index) {
-            case 2: // NAME
-                strncpy(item_name, token, 31);
-                item_name[31] = '\0';
-                break;
-            case 4: // ATK
-                atk = atoi(token);
-                break;
-            case 5: // DEF
-                def = atoi(token);
-                break;
-            case 6: // HP
-                hp = atoi(token);
-                break;
-            }
-
-#ifdef _MSC_VER
-            token = strtok_s(NULL, DELIMITER, &context);
-#else
-            token = strtok(NULL, DELIMITER);
-#endif
-        }
-
-        if (field_index < 6) continue;
+        
+        int atk = atoi(str_atk);
+        int def = atoi(str_def);
+        int hp = atoi(str_hp);
 
         // 문제 1 조건: ATK >= 4 && DEF <= 5 && HP <= 100
         if (atk >= 4 && def <= 5 && hp <= 100) {
             if (item_name_count < MAX_ITEMS) {
-                strcpy(item_names[item_name_count], item_name);
+                custom_strcpy(item_names[item_name_count], item_name, 32);
                 item_name_count++;
             }
         }
@@ -156,16 +214,16 @@ void load_quiz_1_answer() {
     fclose(fp);
 
     if (item_name_count > 0) {
-     
+       
         g_quiz[g_quiz_count].index = 1;
-        strcpy(g_quiz[g_quiz_count].name, "Quiz 1 Answer");
+        custom_strcpy(g_quiz[g_quiz_count].name, "Quiz 1 Answer", 128);
         g_quiz[g_quiz_count].answer[0] = '\0';
 
         
         for (int i = item_name_count - 1; i >= 0; i--) {
-            strcat(g_quiz[g_quiz_count].answer, item_names[i]);
+            custom_strcat(g_quiz[g_quiz_count].answer, item_names[i], 128);
             if (i > 0) {
-                strcat(g_quiz[g_quiz_count].answer, "|");
+                custom_strcat(g_quiz[g_quiz_count].answer, "|", 128);
             }
         }
         g_quiz_count++;
@@ -174,18 +232,11 @@ void load_quiz_1_answer() {
 }
 
 // -------------------------------------------------------------------------
-//  문제 2:
+//  문제 2
 // -------------------------------------------------------------------------
 void load_quiz_2_answer() {
-    FILE* fp;
-    const char* filename = "AI1-2_C_Final.csv";
-
-#ifdef _MSC_VER
-    if (fopen_s(&fp, filename, "r") != 0 || fp == NULL) {
-#else
-    fp = fopen(filename, "r");
+    FILE* fp = fopen("AI1-2_C_Final.csv", "r");
     if (fp == NULL) {
-#endif
         printf("\n[ERROR] 'AI1-2_C_Final.csv' 파일을 찾을 수 없습니다!\n");
         return;
     }
@@ -196,20 +247,19 @@ void load_quiz_2_answer() {
 
     int total_N = 0;
 
-   
+    
     if (fgets(line, sizeof(line), fp) == NULL) {
         fclose(fp);
         return;
     }
 
     while (fgets(line, sizeof(line), fp) != NULL) {
-        line[strcspn(line, "\r\n")] = 0;
-
+        custom_chomp(line);
         
         get_csv_field(line, 2, slot_field, sizeof(slot_field));
 
-        if (strcmp(slot_field, "W") == 0) {
-           
+        if (custom_strcmp(slot_field, "W") == 0) {
+            
             get_csv_field(line, 7, key_frag_field, sizeof(key_frag_field));
 
             int index = find_t_index(key_frag_field);
@@ -219,23 +269,47 @@ void load_quiz_2_answer() {
 
     fclose(fp);
 
-
     g_quiz[g_quiz_count].index = 2;
-    strcpy(g_quiz[g_quiz_count].name, "Quiz 2 Answer");
+    custom_strcpy(g_quiz[g_quiz_count].name, "Quiz 2 Answer", 128);
 
     char num_str[10];
-#ifdef _MSC_VER
-    sprintf_s(num_str, sizeof(num_str), "%d", total_N);
-#else
-    sprintf(num_str, "%d", total_N);
-#endif
+    custom_itoa(total_N, num_str); 
 
-    strcpy(g_quiz[g_quiz_count].answer, num_str);
-    strcat(g_quiz[g_quiz_count].answer, "key");
+    custom_strcpy(g_quiz[g_quiz_count].answer, num_str, 128);
+    custom_strcat(g_quiz[g_quiz_count].answer, "key", 128);
 
     g_quiz_count++;
     printf("TEAM-BETA [System]: 퀴즈 2 (Index 2) 정답 로드 완료.\n");
-    }
+}
+
+// -------------------------------------------------------------------------
+// 모션
+// -------------------------------------------------------------------------
+
+static int get_dist(const Player* p1, const Player* p2) {
+    int dx = abs(get_player_x(p1) - get_player_x(p2));
+    int dy = abs(get_player_y(p1) - get_player_y(p2));
+    return dx + dy;
+}
+
+int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
+    int dist = get_dist(my_info, opponent_info);
+
+    
+    if (dist <= 1) return CMD_ATTACK;
+
+    int my_x = get_player_x(my_info);
+    int opp_x = get_player_x(opponent_info);
+    int my_y = get_player_y(my_info);
+    int opp_y = get_player_y(opponent_info);
+
+  
+    if (my_x != opp_x) return (my_x < opp_x) ? CMD_RIGHT : CMD_LEFT;
+    if (my_y != opp_y) return (my_y < opp_y) ? CMD_DOWN : CMD_UP;
+
+    return CMD_ATTACK;
+}
+
 
 
 int my_secret_key_B;
@@ -244,6 +318,7 @@ void student2_ai_entry() {
     my_secret_key_B = register_player_ai("TEAM-BETA", student2_ai_logic);
 
     load_quiz_1_answer();
+    
     load_quiz_2_answer();
 
     printf("TEAM-BETA: 준비 완료.\n");
