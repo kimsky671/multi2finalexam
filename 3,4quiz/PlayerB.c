@@ -2,7 +2,7 @@
 #include "api.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+
 
 #ifndef CMD_UP
 #define CMD_UP 1
@@ -14,7 +14,7 @@
 
 
 #ifndef CMD_BLINK
-#define CMD_BLINK 8         
+#define CMD_BLINK 8
 #endif
 #ifndef CMD_BLINK_DOWN
 #define CMD_BLINK_DOWN 9
@@ -28,20 +28,37 @@
 
 
 #ifndef CMD_HEAL2
-#define CMD_HEAL2 13        
+#define CMD_HEAL2 13
 #endif
 
 
 typedef struct {
-    int index;          
-    char name[128];     
-    char answer[128];   
+    int index;
+    char name[128];
+    char answer[128];
 } QuizData;
 
 QuizData g_quiz[100];
 int g_quiz_count = 0;
+int my_secret_key_B;
 
-// ¹®ÀÚ¿­ À¯Æ¿¸®Æ¼ (ÁÙ¹Ù²Ş Á¦°Å)
+
+int my_strlen(const char* str) {
+    int len = 0;
+    while (str[len] != '\0') len++;
+    return len;
+}
+
+void my_strcpy(char* dest, const char* src) {
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+
 void trim_newline(char* str) {
     int i = 0;
     while (str[i] != '\0') {
@@ -53,43 +70,58 @@ void trim_newline(char* str) {
     }
 }
 
+const char* CANDIDATE_FILES[] = {
+    "quiz_data.csv", "Test_data.csv", "game_puzzle_en.csv", "data.csv", "final_exam.csv"
+};
+const int NUM_CANDIDATES = sizeof(CANDIDATE_FILES) / sizeof(CANDIDATE_FILES[0]);
 
 void load_quiz_data() {
-    FILE* fp = fopen("quiz_data.csv", "r"); 
+    FILE* fp = NULL;
+    char line[512];
+
+    for (int i = 0; i < NUM_CANDIDATES; i++) {
+        fp = fopen(CANDIDATE_FILES[i], "r");
+        if (fp != NULL) {
+            printf("TEAM-BETA [System]: íŒŒì¼ ë¡œë“œ ì„±ê³µ -> %s\n", CANDIDATE_FILES[i]);
+            break;
+        }
+    }
     if (fp == NULL) {
-        printf("\n[ERROR] 'quiz_data.csv' ÆÄÀÏÀ» Ã£À» ¼ö ¾ø½À´Ï´Ù!\n");
+        printf("\n[ERROR] ë°ì´í„° íŒŒì¼ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤!\n");
         return;
     }
 
-    char line[512];
-   
     fgets(line, sizeof(line), fp);
-
     g_quiz_count = 0;
+
     while (fgets(line, sizeof(line), fp) != NULL) {
-        
-        char* token = strtok(line, ",");
-        if (token == NULL) continue;
-
-        g_quiz[g_quiz_count].index = atoi(token);
-
-        token = strtok(NULL, ",");
-        if (token) strcpy(g_quiz[g_quiz_count].name, token); 
+        char* ptr = line;
+        char* token_start = ptr;
 
         
-        token = strtok(NULL, ",");
-        if (token) {
-            strcpy(g_quiz[g_quiz_count].answer, token);
-            trim_newline(g_quiz[g_quiz_count].answer);
-        }
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue;
+        *ptr = '\0';
+        g_quiz[g_quiz_count].index = atoi(token_start);
+
+        ptr++;
+        token_start = ptr;
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue;
+        *ptr = '\0';
+        my_strcpy(g_quiz[g_quiz_count].name, token_start);
+
+       
+        ptr++;
+        token_start = ptr;
+        my_strcpy(g_quiz[g_quiz_count].answer, token_start);
+        trim_newline(g_quiz[g_quiz_count].answer);
 
         g_quiz_count++;
     }
     fclose(fp);
-
-    printf("TEAM-BETA [System]: ÄûÁî µ¥ÀÌÅÍ %d°³ ·Îµå ¿Ï·á.\n", g_quiz_count);
+    printf("TEAM-BETA [System]: ë°ì´í„° %dê°œ ë¡œë“œ ì™„ë£Œ.\n", g_quiz_count);
 }
-
 
 const char* get_answer_by_index(int target_index) {
     for (int i = 0; i < g_quiz_count; i++) {
@@ -97,54 +129,38 @@ const char* get_answer_by_index(int target_index) {
             return g_quiz[i].answer;
         }
     }
-    return ""; 
+    return "";
 }
 
 
 void unlock_blink_skill(int player_key) {
     if (g_quiz_count == 0) return;
-
-    
     const char* found_key = get_answer_by_index(8);
 
-    printf("TEAM-BETA [Debug]: Á¡¸ê(Index 8) Å° Ã£À½ = [%s]\n", found_key);
-
-    if (strlen(found_key) > 0) {
-       
-        attempt_skill_unlock(player_key, CMD_BLINK, found_key);       
-        attempt_skill_unlock(player_key, CMD_BLINK_DOWN, found_key);  
-        attempt_skill_unlock(player_key, CMD_BLINK_LEFT, found_key); 
-        attempt_skill_unlock(player_key, CMD_BLINK_RIGHT, found_key); 
-    }
-    else {
-        printf("TEAM-BETA [Error]: Á¡¸ê Á¤´ä(Index 8)À» Ã£Áö ¸øÇß½À´Ï´Ù.\n");
+    if (my_strlen(found_key) > 0) {
+        attempt_skill_unlock(player_key, CMD_BLINK, found_key);
+        attempt_skill_unlock(player_key, CMD_BLINK_DOWN, found_key);
+        attempt_skill_unlock(player_key, CMD_BLINK_LEFT, found_key);
+        attempt_skill_unlock(player_key, CMD_BLINK_RIGHT, found_key);
     }
 
     if (is_skill_unlocked(player_key, CMD_BLINK))
-        printf("TEAM-BETA [Success]: Á¡¸ê 4Á¾ ÇØ±İ ¼º°ø!\n");
+        printf("TEAM-BETA [Success]: ì ë©¸ 4ì¢… í•´ê¸ˆ ì™„ë£Œ!\n");
 }
 
-// [¹®Á¦ 4] È¸º¹2(13) ÇØ±İ ·ÎÁ÷
 void unlock_heal2_skill(int player_key) {
     if (g_quiz_count == 0) return;
-
-   
     const char* found_key = get_answer_by_index(13);
 
-    printf("TEAM-BETA [Debug]: È¸º¹2(Index 13) Å° Ã£À½ = [%s]\n", found_key);
-
-    if (strlen(found_key) > 0) {
+    if (my_strlen(found_key) > 0) {
         attempt_skill_unlock(player_key, CMD_HEAL2, found_key);
-    }
-    else {
-        printf("TEAM-BETA [Error]: È¸º¹2 Á¤´ä(Index 13)À» Ã£Áö ¸øÇß½À´Ï´Ù.\n");
     }
 
     if (is_skill_unlocked(player_key, CMD_HEAL2))
-        printf("TEAM-BETA [Success]: È¸º¹2(ID 13) ÇØ±İ ¿Ï·á.\n");
+        printf("TEAM-BETA [Success]: íšŒë³µ2 í•´ê¸ˆ ì™„ë£Œ!\n");
 }
 
-// ÇØ´ç ÆÄÆ®´Â Á¦°¡ ÀÓÀÇ·Î Â§ °ø°İ·ÎÁ÷ÀÔ´Ï´Ù. Áö¿ì¼Åµµ ¹«¹æÇÕ´Ï´Ù.
+// í•´ë‹¹ íŒŒíŠ¸ëŠ” ì œê°€ ì„ì˜ë¡œ ì§  ê³µê²©ë¡œì§ì…ë‹ˆë‹¤. ì§€ìš°ì…”ë„ ë¬´ë°©í•©ë‹ˆë‹¤.
 static int get_dist(const Player* p1, const Player* p2) {
     int dx = abs(get_player_x(p1) - get_player_x(p2));
     int dy = abs(get_player_y(p1) - get_player_y(p2));
@@ -154,7 +170,7 @@ static int get_dist(const Player* p1, const Player* p2) {
 int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
     int dist = get_dist(my_info, opponent_info);
 
-    // °Å¸® 1 ÀÌ³»¸é °ø°İ
+    // ê±°ë¦¬ 1 ì´ë‚´ë©´ ê³µê²©
     if (dist <= 1) return CMD_ATTACK;
 
     int my_x = get_player_x(my_info);
@@ -162,7 +178,7 @@ int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
     int my_y = get_player_y(my_info);
     int opp_y = get_player_y(opponent_info);
 
-    // Ãß°İ
+    // ì¶”ê²©
     if (my_x != opp_x) return (my_x < opp_x) ? CMD_RIGHT : CMD_LEFT;
     if (my_y != opp_y) return (my_y < opp_y) ? CMD_DOWN : CMD_UP;
 
@@ -170,23 +186,20 @@ int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
 }
 
 
-// ¸ŞÀÎ ÁøÀÔÁ¡
-int my_secret_key_B;
 
 void student2_ai_entry() {
     my_secret_key_B = register_player_ai("TEAM-BETA", student2_ai_logic);
 
-    
     load_quiz_data();
- 
+
     if (g_quiz_count > 0) {
         unlock_blink_skill(my_secret_key_B);
         unlock_heal2_skill(my_secret_key_B);
     }
     else {
-        printf("TEAM-BETA [Error]: µ¥ÀÌÅÍ ·Îµå ½ÇÆĞ.\n");
+        printf("TEAM-BETA [Error]: ë°ì´í„° ë¡œë“œ ì‹¤íŒ¨.\n");
     }
 
-    printf("TEAM-BETA: ÁØºñ ¿Ï·á.\n");
-    getchar(); 
+    printf("TEAM-BETA: ì¤€ë¹„ ì™„ë£Œ.\n");
+    getchar();
 }
