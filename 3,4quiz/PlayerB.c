@@ -227,3 +227,324 @@ void student2_ai_entry() {
     printf("TEAM-BETA: 준비 완료.\n");
     getchar();
 }
+
+
+// ==========================================================
+// 이 밑의 코드는 csv데이터 값을 직접 계산하여 풀이까지 하는 코드 입니다.
+// 위 코드는 csv의 명시된 답만을 찾아 작동하는 코드입니다. 
+// 두개의 코드 다 csv을 읽고 작동하는 것을 똑같으나 혹시 몰라서 2개 다 제시합니다. 
+// ==========================================================
+/*
+
+#define _CRT_SECURE_NO_WARNINGS
+#include "api.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct {
+    int id;
+    char name[64];
+    char slot[16];
+    int atk;
+    int def;
+    int hp;
+    char curse[32];
+    char key_frag[16];
+} ItemData;
+
+ItemData g_items[200];
+int g_item_count = 0;
+int my_secret_key_B;
+
+
+int my_strlen(const char* str) {
+    int len = 0;
+    while (str[len] != '\0') len++;
+    return len;
+}
+
+void my_strcpy(char* dest, const char* src) {
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+void my_strcat(char* dest, const char* src) {
+    while (*dest != '\0') dest++;
+    while (*src != '\0') {
+        *dest = *src;
+        dest++;
+        src++;
+    }
+    *dest = '\0';
+}
+
+int my_strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
+
+
+const char* my_strstr(const char* haystack, const char* needle) {
+    if (!*needle) return haystack;
+    for (; *haystack; haystack++) {
+        const char* h = haystack;
+        const char* n = needle;
+        while (*h && *n && *h == *n) {
+            h++;
+            n++;
+        }
+        if (!*n) return haystack;
+    }
+    return NULL;
+}
+
+void trim_newline(char* str) {
+    int i = 0;
+    while (str[i] != '\0') {
+        if (str[i] == '\r' || str[i] == '\n') {
+            str[i] = '\0';
+            break;
+        }
+        i++;
+    }
+}
+
+// ==========================================================
+// 밑에 파트는 csv 파일 명을 임의로 지정하여 찾는 방식입니다. 혹시나 싶어서 여려 파일 명을
+// 사용가능하게 했으나 지우셔도 무방합니다. 
+// ==========================================================
+
+const char* CANDIDATE_FILES[] = {
+    "game_puzzle_en.csv", "AI1-2_C_Final.csv", "data.csv", "test_data.csv"
+};
+const int NUM_CANDIDATES = sizeof(CANDIDATE_FILES) / sizeof(CANDIDATE_FILES[0]);
+
+void load_game_data() {
+    FILE* fp = NULL;
+    char line[512];
+
+    // 파일 찾기
+    for (int i = 0; i < NUM_CANDIDATES; i++) {
+        fp = fopen(CANDIDATE_FILES[i], "r");
+        if (fp != NULL) {
+            printf("TEAM-BETA [System]: 파일 로드 성공 -> %s\n", CANDIDATE_FILES[i]);
+            break;
+        }
+    }
+    if (fp == NULL) {
+        printf("\n[ERROR] 데이터 파일을 찾을 수 없습니다!\n");
+        return;
+    }
+
+    
+    fgets(line, sizeof(line), fp); 
+    g_item_count = 0;
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        char* ptr = line;
+        char* token_start = ptr;
+
+        // 1. ID
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue; *ptr = '\0';
+        g_items[g_item_count].id = atoi(token_start);
+
+        // 2. NAME
+        ptr++; token_start = ptr;
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue; *ptr = '\0';
+        my_strcpy(g_items[g_item_count].name, token_start);
+
+        // 3. SLOT
+        ptr++; token_start = ptr;
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue; *ptr = '\0';
+        my_strcpy(g_items[g_item_count].slot, token_start);
+
+        // 4. ATK
+        ptr++; token_start = ptr;
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue; *ptr = '\0';
+        g_items[g_item_count].atk = atoi(token_start);
+
+        // 5. DEF
+        ptr++; token_start = ptr;
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue; *ptr = '\0';
+        g_items[g_item_count].def = atoi(token_start);
+
+        // 6. HP
+        ptr++; token_start = ptr;
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue; *ptr = '\0';
+        g_items[g_item_count].hp = atoi(token_start);
+
+        // 7. CURSE
+        ptr++; token_start = ptr;
+        while (*ptr != ',' && *ptr != '\0') ptr++;
+        if (*ptr == '\0') continue; *ptr = '\0';
+        my_strcpy(g_items[g_item_count].curse, token_start);
+
+        // 8. KEY_FRAG
+        ptr++; token_start = ptr;
+        my_strcpy(g_items[g_item_count].key_frag, token_start);
+        trim_newline(g_items[g_item_count].key_frag);
+
+        g_item_count++;
+    }
+    fclose(fp);
+    printf("TEAM-BETA [System]: 아이템 데이터 %d개 로드 완료.\n", g_item_count);
+}
+
+// ==========================================================
+// 2. 문제 풀이 로직 
+// ==========================================================
+
+// [문제 3] 점멸 (8~11) - 계산 로직
+void solve_blink_puzzle() {
+    if (g_item_count == 0) return;
+    char final_key[128] = "";
+
+    // 1. 기준 스탯 찾기 (ID 202, 208, 205, 212)
+    int def_202 = 0, def_208 = 0, atk_205 = 0, atk_212 = 0;
+    for (int i = 0; i < g_item_count; i++) {
+        if (g_items[i].id == 202) def_202 = g_items[i].def;
+        if (g_items[i].id == 208) def_208 = g_items[i].def;
+        if (g_items[i].id == 205) atk_205 = g_items[i].atk;
+        if (g_items[i].id == 212) atk_212 = g_items[i].atk;
+    }
+
+   
+    int target_hp = def_202 + def_208;
+    for (int i = 0; i < g_item_count; i++) {
+        if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
+        if (g_items[i].hp == target_hp) {
+            my_strcat(final_key, g_items[i].key_frag);
+            break;
+        }
+    }
+
+    
+    int target_atk = atk_205 * atk_212;
+    for (int i = g_item_count - 1; i >= 0; i--) {
+        if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
+        if (g_items[i].atk == target_atk) {
+            my_strcat(final_key, g_items[i].key_frag);
+            break;
+        }
+    }
+
+   
+    for (int i = g_item_count - 1; i >= 0; i--) {
+        if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
+        if (my_strstr(g_items[i].curse, "C_01") != NULL) {
+            my_strcat(final_key, g_items[i].key_frag);
+            break;
+        }
+    }
+
+    
+    for (int i = 0; i < g_item_count; i++) {
+        if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
+        if (g_items[i].name[0] == 'I') {
+            my_strcat(final_key, g_items[i].key_frag);
+            break;
+        }
+    }
+
+    printf("TEAM-BETA [Debug]: 점멸 계산된 키 = [%s]\n", final_key);
+
+    if (my_strlen(final_key) > 0) {
+        attempt_skill_unlock(my_secret_key_B, CMD_BLINK_UP, final_key);
+        attempt_skill_unlock(my_secret_key_B, CMD_BLINK_DOWN, final_key);
+        attempt_skill_unlock(my_secret_key_B, CMD_BLINK_LEFT, final_key);
+        attempt_skill_unlock(my_secret_key_B, CMD_BLINK_RIGHT, final_key);
+    }
+
+    if (is_skill_unlocked(my_secret_key_B, CMD_BLINK_UP))
+        printf("TEAM-BETA [Success]: 점멸 4종 해금 성공!\n");
+}
+
+// [문제 4] 회복2 (13) 
+void solve_heal2_puzzle() {
+    if (g_item_count == 0) return;
+    char final_key[128] = "";
+
+    
+    for (int i = 0; i < g_item_count; i++) {
+        if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
+
+        if (my_strcmp(g_items[i].name, g_items[i].slot) >= 0) {
+            my_strcat(final_key, g_items[i].key_frag);
+            break;
+        }
+    }
+
+    printf("TEAM-BETA [Debug]: 회복2 계산된 키 = [%s]\n", final_key);
+
+    if (my_strlen(final_key) > 0) {
+        attempt_skill_unlock(my_secret_key_B, CMD_HEAL_ALL, final_key);
+    }
+
+    if (is_skill_unlocked(my_secret_key_B, CMD_HEAL_ALL))
+        printf("TEAM-BETA [Success]: 회복2 해금 성공!\n");
+}
+
+// ==========================================================
+// // 해당 파트는 제가 임의로 짠 공격로직입니다. 지우셔도 무방합니다.
+// ==========================================================
+static int get_dist(const Player* p1, const Player* p2) {
+    int dx = abs(get_player_x(p1) - get_player_x(p2));
+    int dy = abs(get_player_y(p1) - get_player_y(p2));
+    return dx + dy;
+}
+
+int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
+    int dist = get_dist(my_info, opponent_info);
+
+    if (get_player_hp(my_info) <= 2 && get_player_mp(my_info) >= 2) {
+        if (is_skill_unlocked(my_secret_key_B, CMD_HEAL_ALL)) {
+            return CMD_HEAL_ALL;
+        }
+        return CMD_REST;
+    }
+
+    if (dist <= 1) return CMD_ATTACK;
+
+    int my_x = get_player_x(my_info);
+    int opp_x = get_player_x(opponent_info);
+    int my_y = get_player_y(my_info);
+    int opp_y = get_player_y(opponent_info);
+
+    if (my_x != opp_x) return (my_x < opp_x) ? CMD_RIGHT : CMD_LEFT;
+    if (my_y != opp_y) return (my_y < opp_y) ? CMD_DOWN : CMD_UP;
+
+    return CMD_ATTACK;
+}
+
+
+void student2_ai_entry() {
+    
+    my_secret_key_B = register_player_ai("TEAM-BETA", student2_ai_logic);
+
+    load_game_data();
+
+    if (g_item_count > 0) {
+        solve_blink_puzzle();
+        solve_heal2_puzzle();
+    }
+    else {
+        printf("TEAM-BETA [Error]: 데이터 로드 실패.\n");
+    }
+
+    printf("TEAM-BETA: 준비 완료.\n");
+    getchar();
+}
+*/
