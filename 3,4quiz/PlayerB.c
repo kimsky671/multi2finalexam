@@ -81,7 +81,7 @@ void load_quiz_data() {
         return;
     }
 
-    
+
     fgets(line, sizeof(line), fp); // 헤더 스킵
     g_quiz_count = 0;
 
@@ -89,13 +89,13 @@ void load_quiz_data() {
         char* ptr = line;
         char* token_start = ptr;
 
-       
+
         while (*ptr != ',' && *ptr != '\0') ptr++;
         if (*ptr == '\0') continue;
         *ptr = '\0';
         g_quiz[g_quiz_count].index = atoi(token_start);
 
-        
+
         ptr++;
         token_start = ptr;
         while (*ptr != ',' && *ptr != '\0') ptr++;
@@ -103,7 +103,7 @@ void load_quiz_data() {
         *ptr = '\0';
         my_strcpy(g_quiz[g_quiz_count].name, token_start);
 
-       
+
         ptr++;
         token_start = ptr;
         my_strcpy(g_quiz[g_quiz_count].answer, token_start);
@@ -138,10 +138,10 @@ void unlock_blink_skill(int player_key) {
 
     if (my_strlen(found_key) > 0) {
         // 8~11번 스킬 모두 시도
-        attempt_skill_unlock(player_key, CMD_BLINK_UP, found_key);    
-        attempt_skill_unlock(player_key, CMD_BLINK_DOWN, found_key);  
-        attempt_skill_unlock(player_key, CMD_BLINK_LEFT, found_key);  
-        attempt_skill_unlock(player_key, CMD_BLINK_RIGHT, found_key); 
+        attempt_skill_unlock(player_key, CMD_BLINK_UP, found_key);
+        attempt_skill_unlock(player_key, CMD_BLINK_DOWN, found_key);
+        attempt_skill_unlock(player_key, CMD_BLINK_LEFT, found_key);
+        attempt_skill_unlock(player_key, CMD_BLINK_RIGHT, found_key);
     }
     else {
         printf("TEAM-BETA [Error]: 점멸 정답(Index 8)을 찾지 못했습니다.\n");
@@ -157,13 +157,13 @@ void unlock_blink_skill(int player_key) {
 void unlock_heal2_skill(int player_key) {
     if (g_quiz_count == 0) return;
 
-   
+
     const char* found_key = get_answer_by_index(13);
 
     printf("TEAM-BETA [Debug]: 회복2(Index 13) 키 찾음 = [%s]\n", found_key);
 
     if (my_strlen(found_key) > 0) {
-        
+
         attempt_skill_unlock(player_key, CMD_HEAL_ALL, found_key);
     }
     else {
@@ -176,14 +176,44 @@ void unlock_heal2_skill(int player_key) {
 
 
 // 해당 파트는 제가 임의로 짠 공격로직입니다. 지우셔도 무방합니다.
-static int get_dist(const Player* p1, const Player* p2) {
+// 로직 추가했습니다.
+static int get_dist(const Player * p1, const Player * p2) {
     int dx = abs(get_player_x(p1) - get_player_x(p2));
     int dy = abs(get_player_y(p1) - get_player_y(p2));
     return dx + dy;
 }
 
+// 이전 체력을 기억하기 위한 정적 변수
+static int prev_hp = -1;
+
 int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
+    
+    // 현재 상태 조회
+    int my_hp = get_player_hp(my_info);
+    int my_mp = get_player_mp(my_info);
+    int my_x = get_player_x(my_info);
+    int my_y = get_player_y(my_info);
+
+    int opp_x = get_player_x(opponent_info);
+    int opp_y = get_player_y(opponent_info);
+    
     int dist = get_dist(my_info, opponent_info);
+
+    if (prev_hp != -1) { // 첫 턴이 아닐 때만
+        int damage_taken = prev_hp - my_hp;
+        if (damage_taken >= 2) {
+            // MP가 충분하고(3 이상) 회복2(13번)가 해금되었으면 사용
+            if (my_mp >= 3 && is_skill_unlocked(my_secret_key_B, CMD_HEAL_ALL)) {
+                prev_hp = my_hp + 2; 
+                return CMD_HEAL_ALL; 
+            }
+            // MP가 부족하거나 잠겨있으면 회복1(12번) 사용
+            else if (my_mp >= 1) {
+                prev_hp = my_hp + 1;
+                return 12; 
+            }
+        }
+    }
 
     // 체력이 낮고(2 이하), MP가 충분하면(2 이상) 회복2 사용 
     if (get_player_hp(my_info) <= 2 && get_player_mp(my_info) >= 2) {
@@ -196,10 +226,17 @@ int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
     // 거리 1 이내면 공격
     if (dist <= 1) return CMD_ATTACK;
 
-    int my_x = get_player_x(my_info);
-    int opp_x = get_player_x(opponent_info);
-    int my_y = get_player_y(my_info);
-    int opp_y = get_player_y(opponent_info);
+
+
+    //원거리 일직선 공격( 거리 3 이상 )
+    if (dist >= 3) {
+        // X축이 같거나 Y축이 같을 때 (일직선상)
+        if (my_x == opp_x || my_y == opp_y) {
+            if (my_mp >= 2 && is_skill_unlocked(my_secret_key_B, 14)) {
+                return 14; 
+            }
+        }
+    }
 
     // 추격
     if (my_x != opp_x) return (my_x < opp_x) ? CMD_RIGHT : CMD_LEFT;
@@ -210,8 +247,9 @@ int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
 
 
 
+
 void student2_ai_entry() {
-   
+
     my_secret_key_B = register_player_ai("TEAM-BETA", student2_ai_logic);
 
     load_quiz_data();
@@ -232,7 +270,8 @@ void student2_ai_entry() {
 // ==========================================================
 // 이 밑의 코드는 csv데이터 값을 직접 계산하여 풀이까지 하는 코드 입니다.
 // 위 코드는 csv의 명시된 답만을 찾아 작동하는 코드입니다. 
-// 두개의 코드 다 csv을 읽고 작동하는 것을 똑같으나 혹시 몰라서 2개 다 제시합니다. 
+// 두개의 코드 다 csv을 읽고 작동하는 것을 똑같으나 혹시 몰라서 2개 다 제시합니다.
+//테스트 결과 혹시 모를 상황에 대비하는 건 아래 코드가 더 적합한 것 같습니다.
 // ==========================================================
 /*
 
@@ -318,7 +357,7 @@ void trim_newline(char* str) {
 
 // ==========================================================
 // 밑에 파트는 csv 파일 명을 임의로 지정하여 찾는 방식입니다. 혹시나 싶어서 여려 파일 명을
-// 사용가능하게 했으나 지우셔도 무방합니다. 
+// 사용가능하게 했으나 지우셔도 무방합니다.
 // ==========================================================
 
 const char* CANDIDATE_FILES[] = {
@@ -343,8 +382,8 @@ void load_game_data() {
         return;
     }
 
-    
-    fgets(line, sizeof(line), fp); 
+
+    fgets(line, sizeof(line), fp);
     g_item_count = 0;
 
     while (fgets(line, sizeof(line), fp) != NULL) {
@@ -404,7 +443,7 @@ void load_game_data() {
 }
 
 // ==========================================================
-// 2. 문제 풀이 로직 
+// 2. 문제 풀이 로직
 // ==========================================================
 
 // [문제 3] 점멸 (8~11) - 계산 로직
@@ -421,7 +460,7 @@ void solve_blink_puzzle() {
         if (g_items[i].id == 212) atk_212 = g_items[i].atk;
     }
 
-   
+
     int target_hp = def_202 + def_208;
     for (int i = 0; i < g_item_count; i++) {
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
@@ -431,7 +470,7 @@ void solve_blink_puzzle() {
         }
     }
 
-    
+
     int target_atk = atk_205 * atk_212;
     for (int i = g_item_count - 1; i >= 0; i--) {
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
@@ -441,7 +480,7 @@ void solve_blink_puzzle() {
         }
     }
 
-   
+
     for (int i = g_item_count - 1; i >= 0; i--) {
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
         if (my_strstr(g_items[i].curse, "C_01") != NULL) {
@@ -450,7 +489,7 @@ void solve_blink_puzzle() {
         }
     }
 
-    
+
     for (int i = 0; i < g_item_count; i++) {
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
         if (g_items[i].name[0] == 'I') {
@@ -472,12 +511,12 @@ void solve_blink_puzzle() {
         printf("TEAM-BETA [Success]: 점멸 4종 해금 성공!\n");
 }
 
-// [문제 4] 회복2 (13) 
+// [문제 4] 회복2 (13)
 void solve_heal2_puzzle() {
     if (g_item_count == 0) return;
     char final_key[128] = "";
 
-    
+
     for (int i = 0; i < g_item_count; i++) {
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
 
@@ -531,7 +570,7 @@ int student2_ai_logic(const Player* my_info, const Player* opponent_info) {
 
 
 void student2_ai_entry() {
-    
+
     my_secret_key_B = register_player_ai("TEAM-BETA", student2_ai_logic);
 
     load_game_data();
