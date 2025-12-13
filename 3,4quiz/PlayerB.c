@@ -446,21 +446,21 @@ void load_game_data() {
 // 2. 문제 풀이 로직
 // ==========================================================
 
-// [문제 3] 점멸 (8~11) - 계산 로직
+// [문제 3] 점멸 (8~11)
 void solve_blink_puzzle() {
     if (g_item_count == 0) return;
     char final_key[128] = "";
 
-    // 1. 기준 스탯 찾기 (ID 202, 208, 205, 212)
-    int def_202 = 0, def_208 = 0, atk_205 = 0, atk_212 = 0;
+    // 1. 기준 스탯 찾기
+    int def_202 = 0, def_208 = 0, def_205 = 0, atk_212 = 0;
+    
     for (int i = 0; i < g_item_count; i++) {
         if (g_items[i].id == 202) def_202 = g_items[i].def;
         if (g_items[i].id == 208) def_208 = g_items[i].def;
-        if (g_items[i].id == 205) atk_205 = g_items[i].atk;
+        if (g_items[i].id == 205) def_205 = g_items[i].def;
         if (g_items[i].id == 212) atk_212 = g_items[i].atk;
     }
-
-
+    
     int target_hp = def_202 + def_208;
     for (int i = 0; i < g_item_count; i++) {
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
@@ -470,9 +470,9 @@ void solve_blink_puzzle() {
         }
     }
 
-
-    int target_atk = atk_205 * atk_212;
-    for (int i = g_item_count - 1; i >= 0; i--) {
+    // 조건 2: ATK 계산 (205 DEF * 212 ATK)-수정
+    int target_atk = def_205 * atk_212; 
+    for (int i = g_item_count - 1; i >= 0; i--) { 
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
         if (g_items[i].atk == target_atk) {
             my_strcat(final_key, g_items[i].key_frag);
@@ -480,7 +480,7 @@ void solve_blink_puzzle() {
         }
     }
 
-
+    // 조건 3: Curse "C_01" 포함
     for (int i = g_item_count - 1; i >= 0; i--) {
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
         if (my_strstr(g_items[i].curse, "C_01") != NULL) {
@@ -489,7 +489,7 @@ void solve_blink_puzzle() {
         }
     }
 
-
+    // 조건 4: NAME 'I'로 시작 (첫 번째)
     for (int i = 0; i < g_item_count; i++) {
         if (my_strcmp(g_items[i].key_frag, "NIL") == 0) continue;
         if (g_items[i].name[0] == 'I') {
